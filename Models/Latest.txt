@@ -1,1 +1,1 @@
-./Models/2022.11.09-12:22:34(WordVec_Epochs:1000)
+./Models/2022.11.29-16:18:39(AnimalRoom_Epochs:500)

@@ -12,10 +12,10 @@ import helper_functions
 params = {  # Choose Model Parameter which are used for training
     'model_name': 'AnimalRoom',
     'model': Datasets.AnimalCognitiveRoom(),
-    'epochs': 1000,
+    'epochs': 500,
     'Number_Samples': 5000,
     'Alternate': 0.15,
-    'batch_size': 10,
+    'batch_size': 50,
     'input_size': 7,
     'output_size': 32,
     'hidden_layers': 1,
@@ -58,15 +58,10 @@ def main(tensorboard_log=True):
     model.compile(optimizer=tf.keras.optimizers.Adam(lr=0.001), loss='categorical_crossentropy',
                   metrics=['accuracy'])
 
-    # config tensorboard
-    tb = None
-    if tensorboard_log:
-        # TODO tensorboard mehr metrics uebergeben
-        tb = TensorBoard(log_dir="./Tensorboard/logs/" + folder_name)
 
     print('Starting training')
     history = model.fit(x_train, y_train, epochs=params['epochs'], validation_split=0.1,
-                        verbose=1, batch_size=params['batch_size'], callbacks=tb)
+                        verbose=1, batch_size=params['batch_size'])
 
     # save latest config
     if not isdir('./' + modelsfolder):

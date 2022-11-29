@@ -11,20 +11,18 @@ from keras.models import load_model
 prediction = True
 ground_truth = False
 m_matrix = False
-mds = False
+mds = True
 pca = False
-eigenvector = False
-graph = False
 accuracy = False
 loss = False
-evaluate_interpolation = True
-plot_list = [prediction,m_matrix, mds, pca, graph, ground_truth, eigenvector, accuracy, loss, evaluate_interpolation]
+evaluate_interpolation = False
+plot_list = [prediction,m_matrix, mds, pca, ground_truth, accuracy, loss, evaluate_interpolation]
 
 
 # -------------------------------------------------------------------------
 
 def main(model_files=None):
-    global m_matrix, mds, pca, graph, plot_list
+    global m_matrix, mds, pca, plot_list
     # Init Variable for plot count
     plot_count = 0
     # collect paths - if None pick last model which got trained
@@ -49,18 +47,17 @@ def main(model_files=None):
         transition_probability_matrix = helper_functions.create_tpm_SL_AnimalDataSet(model)
         _, animal_data_test, animal_names_test, _, \
         _ = Datasets.AnimalCognitiveRoom(
-            path='/Users/paul/Documents/Promotion/Data/AnimalDataSets/AnimalCognitiveRoomTest.xlsx')
+            path='Dataset/AnimalCognitiveRoomTest.xlsx')
         if params['SR']:
             transition_probability_matrix_gt = helper_functions.create_m_matrix(transition_probability_matrix_gt, params['df'],params['t'])
     ##############################################################################
-    # transition_probability_matrix = model.env.tp_data_matrix
     # Initialize plots
     plot_number = np.sum(plot_list)
     fig, axs = plt.subplots(1, plot_number, figsize=(25,10))
+    # Setting Font Size of Axis and Labels
     plt.rc('font', size=20)
     plt.rc('axes', labelsize=20)
     if prediction:
-        #Setting Font Size of Axis and Labels
         # Show Prediction Vector
         axs[plot_count].imshow(transition_probability_matrix)
         axs[plot_count].set_title('Transition Probability Matrix')
@@ -73,15 +70,11 @@ def main(model_files=None):
         axs[plot_count].set_title('Transition Probability Matrix Ground Truth')
         axs[plot_count].tick_params(labelsize=20)
         plot_count += 1
-    # Calculate all methods if choosen in the beginning
     if m_matrix:
-        # Define Paramaters here df,t
-        d_f = 1
-        t = 3
-        m_matrix = helper_functions.create_m_matrix(transition_probability_matrix, discount_factor=d_f,
-                                                   sequence_length=t)
+        m_matrix = helper_functions.create_m_matrix(transition_probability_matrix, discount_factor=params['df'],
+                                                   sequence_length=params['t'])
         axs[plot_count].imshow(m_matrix)
-        axs[plot_count].set_title('SR, t=' + str(t) + 'DF=' + str(d_f))
+        axs[plot_count].set_title('SR, t=' + str(params['t']) + 'DF=' + str(params['df']))
         plot_count += 1
     if mds:
         # You need to define if use transition_probability_matrix or m_matrix
@@ -99,16 +92,6 @@ def main(model_files=None):
         pca = helper_functions.create_pca(transition_probability_matrix)
         axs[plot_count].scatter(pca[:, 0], pca[:, 1])
         axs[plot_count].set_title('PCA')
-        plot_count += 1
-    if graph:
-        # Very specific for the 40 word language model
-        graph = helper_functions.show_state_prob_graph(transition_probability_matrix, plot=axs[plot_count])
-        axs[plot_count].set_title('Graph')
-        plot_count += 1
-    if eigenvector:
-        eigenvalues, eigenvectors = np.linalg.eig(transition_probability_matrix)
-        axs[plot_count].imshow(eigenvectors)
-        axs[plot_count].set_title('Eigenvectors')
         plot_count += 1
     if accuracy:
         filename_history = model_files + "/history.json"

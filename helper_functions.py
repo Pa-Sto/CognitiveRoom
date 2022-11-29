@@ -59,8 +59,6 @@ def create_m_matrix(prob_matrix, discount_factor=1., sequence_length=1):
         np.fill_diagonal(diag, 1)
         m_matrix = np.linalg.inv(diag - discount_factor * prob_matrix)
 
-    # TODO normalize? why necessary?
-    # m_matrix_norm = m_matrix / np.linalg.norm(m_matrix)
     for runner in range(m_matrix.shape[0]):
         m_matrix[runner, :] /= np.sum(m_matrix[runner, :])
 
@@ -68,12 +66,6 @@ def create_m_matrix(prob_matrix, discount_factor=1., sequence_length=1):
 
 
 def create_mds_matrix(SR, number_components=2):
-    # dis = create_dissimilarity_matrix(SL)
-
-    """
-    inspired by
-    https://scikit-learn.org/stable/modules/generated/sklearn.manifold.MDS.html
-    """
     # print("creating mds-matrix with" + str(number_components) + " components...", end="")
     mds = MDS(n_components=number_components, n_init=100, max_iter=10000, eps=1e-5, n_jobs=-1)
     components = mds.fit_transform(SR)
@@ -82,85 +74,8 @@ def create_mds_matrix(SR, number_components=2):
 
 
 def create_pca(SR, number_components=2):
-    """
-    Inspired by:
-    https://stats.stackexchange.com/questions/229092/how-to-reverse-pca-and-reconstruct-original-variables-from-several-principal-com
-
-    and by
-
-    https://plotly.com/python/pca-visualization/
-    """
-
     pca = PCA(n_components=number_components)
     return pca.fit_transform(SR)
-
-
-def show_state_prob_graph(transition_probability_matrix, plot):
-    # ------------------------------------------------------------------------------------------
-    # for other styles: check https://networkx.org/documentation/stable/reference/drawing.html
-
-    # maybe make nodes with node2vec
-    # found in "Madjiheurem&Toni//State2vec: Off-Policy Successor Features Approximators"
-    # ------------------------------------------------------------------------------------------
-    # !!!!!Still very specialized to the language Model -- Needs adapation!!!!!
-    # ------------------------------------------------------------------------------------------
-
-    # Graph, Plot, Edges and weights init
-    # figure = plt.figure(num="State Probability Graph")
-    weights = []
-    graph = nx.Graph()
-    nodes_no = transition_probability_matrix.shape[0]
-
-    adjectives = ['big', 'small', 'close', 'fast', 'slow', 'brave', 'difficult', 'good', 'bad', 'real']
-    verbs = ['go', 'eat', 'walk', 'lift', 'drive', 'come', 'develope', 'think', 'hear', 'order']
-    nouns = ['house', 'car', 'tree', 'rain', 'river', 'lamp', 'tent', 'dinner', 'night', 'day']
-    pronouns = ['I', 'you', 'they', 'we']
-    questions = ['do', 'can', 'why do', 'what do', 'will', 'must']
-
-    word_groups = []
-    word_groups.append(adjectives)
-    word_groups.append(verbs)
-    word_groups.append(nouns)
-    word_groups.append(pronouns)
-    word_groups.append(questions)
-
-    word_label_coulors = [
-        'blue', 'blue', 'blue', 'blue', 'blue', 'blue', 'blue', 'blue', 'blue', 'blue',
-        'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red', 'red',
-        'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green', 'green',
-        'orange', 'orange', 'orange', 'orange',
-        'yellow', 'yellow', 'yellow', 'yellow', 'yellow', 'yellow']
-    labels_l = word_groups
-    labels = {}
-    i = 0
-    for l in labels_l:
-        labels[i] = l
-        i += 1
-    for i in range(nodes_no):
-        graph.add_node(i, color=word_label_coulors[i])
-        # nodes.append(i)
-        for j in range(nodes_no):
-            if transition_probability_matrix[i, j] > 0:  # (and i < j )
-                # edges.append((i, j))
-                graph.add_edge(i, j, weights=transition_probability_matrix[i, j])
-                weights.append(transition_probability_matrix[i, j])
-
-    # Directed Graph which allows multiply edgeds between nodes
-
-    # graph.add_nodes_from(nodes)
-    # graph.add_edges_from(edges)
-    my_pos = nx.spring_layout(graph, seed=100, iterations=1000)  # k=1./np.sqrt(np.max(visual.params.room_shape)))
-    # my_pos = nx.kamada_kawai_layout(graph)
-
-    # Plot erstellen und Graph anzeigen
-    # figure_graph = plt.figure('State Probability Graph')
-    node_color_dict = (graph.nodes(data='color'))
-    node_color_dict = np.array(node_color_dict)[:, 1]
-    nx.draw(graph, pos=my_pos, node_size=50, width=weights, node_color=node_color_dict, ax=plot)  # , with_labels=True)
-    nx.draw_networkx_labels(graph, my_pos, labels, font_size=16, ax=plot)
-    # figure.show()
-    # plt.show()
-    return graph
 
 
 def hot_encoded_vector(size, state=None):
@@ -175,10 +90,10 @@ def hot_encoded_vector(size, state=None):
 
 
 def create_tpm_SL_AnimalDataSet(model):
-    # Load Referencr Values and create tpm
+    # Load reference values and create tpm
     transition_probability_matrix_gt, animal_data, animal_names, animal_parameter, _ = Datasets.AnimalCognitiveRoom()
     transition_probability_matrix = np.zeros(transition_probability_matrix_gt.shape)
-    # Iterate over all states and give their transition probabilities
+    # Iterate over all states and predict their transition probabilities
     for i in range(transition_probability_matrix_gt.shape[0]):
         state = animal_data[i, :]
         state = state[np.newaxis, :]
@@ -194,7 +109,6 @@ def softmax(input):
 
 def create_cdf_matrix(pdf):
     cdf_matrix = np.copy(pdf)
-
     for i in range(pdf.shape[0]):
         for j in range(1, pdf[i].size):  #
             cdf_matrix[i, j] += cdf_matrix[i, j - 1]
@@ -215,11 +129,10 @@ def get_sequences_AnimalDataSet(number_samples, alternate=0):
     y_train = np.zeros((number_samples, animal_data.shape[0]))
 
     cdf = create_cdf_matrix(transition_probability_matrix)
-    # normal verteilte ausgangszustaende. muss evtl. angepasst werden?
     for i in tqdm(range(number_samples)):
-        # startzustand
+        # Choose random starting state
         state = random.randint(0, cdf.shape[0] - 1)
-
+        # Alternate feature vector of state depending on set rate
         if alternate == 0:
             x_train[i] = animal_data[state, :]
         else:
@@ -228,9 +141,8 @@ def get_sequences_AnimalDataSet(number_samples, alternate=0):
                 factor = np.random.uniform(0, alternate) * animal_data_alternate[j]
                 animal_data_alternate[j] += factor
             x_train[i] = animal_data_alternate
-        # sample next state
+        # Find successor state with cdf and set as label for starting state
         var = random.uniform(0, 1)
-        # find corresponding state
         next_state = 0
         while cdf[state, next_state] < var:
             next_state += 1
@@ -257,11 +169,10 @@ def get_sequences_fromSR_AnimalDataSet(number_samples, t, df, alternate=0):
     y_train = np.zeros((number_samples, animal_data.shape[0]))
 
     cdf = create_cdf_matrix(sr_matrix)
-    # normal verteilte ausgangszustaende. muss evtl. angepasst werden?
     for i in tqdm(range(number_samples)):
-        # startzustand
+        # Choose random starting state
         state = random.randint(0, cdf.shape[0] - 1)
-
+        # Alternate feature vector of state depending on set rate
         if alternate == 0:
             x_train[i] = animal_data[state, :]
         else:
@@ -269,26 +180,18 @@ def get_sequences_fromSR_AnimalDataSet(number_samples, t, df, alternate=0):
             for j in range(4):
                 factor = np.random.uniform(0, alternate) * animal_data_alternate[j]
                 animal_data_alternate[j] += factor
-            x_train[i] = animal_data_alternate
-
-        # sample next state
+            x_train[i] = animal_data_alternate#
+        # Find successor state with cdf and set as label for starting state
         var = random.uniform(0, 1)
-        # find corresponding state
         next_state = 0
         while cdf[state, next_state] < var:
             next_state += 1
-
         next_state = hot_encoded_vector(animal_data.shape[0], next_state)
         y_train[i] = next_state
 
     print("sequences done.")
     return x_train, y_train
 
-
-def gauss(img, mean=0, std=1):  # img is numpy array image
-    gauss = np.random.normal(mean, std, img.size)  # mean=0, std=1
-    gauss = gauss.reshape(img.shape[0], img.shape[1], img.shape[2])
-    return img + gauss
 
 
 def set_random_missing_entries(test_data, missing_entries):
@@ -318,10 +221,8 @@ def set_missing_entries_fixed(test_data, missing_entries, fixed_entry):
         if test_data_incomplete[0, index] != -1:
             test_data_incomplete[:, index] = -1
             index_list.append(index)
-
         while test_data_incomplete[0, index] == -1 and i < missing_entries:
             index = np.random.randint(-1, missing_entries)
-    # print(test_data_incomplete)
     return test_data_incomplete, index_list
 
 
@@ -340,7 +241,6 @@ def set_missing_entries(test_data, missing_entries, protected_entry):
 
         while test_data_incomplete[0, index] == -1 and i < missing_entries - 1 or index == protected_entry:
             index = np.random.randint(-1, missing_entries)
-    # print(test_data_incomplete)
     return test_data_incomplete, index_list
 
 
@@ -353,7 +253,7 @@ def evaluate_model_on_cognitive_room_prediction(model, test_data, missing_entrie
         test_data_incomplete, index_list = set_missing_entries(test_data, missing_entries, protected_entry)
     else:
         test_data_incomplete, index_list = set_missing_entries_fixed(test_data, missing_entries, fixed_entry)
-    # Use model to make prediciton on the test data
+    # Use model to make prediction on the test data
     trp_test_data = model.predict(test_data_incomplete)
 
     # Interpolate data based on memory matrix used for training
